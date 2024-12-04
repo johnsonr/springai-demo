@@ -52,7 +52,9 @@ class ChatService(
                 // Out of the box advisor, handles RAG
                 QuestionAnswerAdvisor(
                     vectorStore,
-                    SearchRequest.defaults().withSimilarityThreshold(.2)
+                    SearchRequest.defaults()
+                        .withSimilarityThreshold(.2)
+                        .withTopK(6)
                 ),
                // Edit application.properties to show log messages from this advisor
                 SimpleLoggerAdvisor(),
