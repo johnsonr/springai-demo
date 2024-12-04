@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Classical Music Store</title>
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+
+    <script>
+        function handleAfterRequest(event) {
+            let userMessage = document.getElementById('messageInput').value;
+            document.getElementById('messageInput').value = '';
+            htmx.ajax('POST', '/respond', {target: '#messageList', values: {message: userMessage}});
+        }
+    </script>
+
+    <link href="/css/dark-mode.css" rel="stylesheet">
+</head>
+<body>
+<h1>Music Store</h1>
+
+<div>
+    <p th:text="${conversationId}">Conversation</p>
+</div>
+
+<div id="messageList">
+    <ul th:replace="~{fragments :: messageList}">
+        <!-- This will be replaced by the actual message list -->
+    </ul>
+</div>
+
+<div class="input">
+    <form
+            hx-on="htmx:afterRequest: handleAfterRequest(event)" hx-put="/messages"
+            hx-target="#messageList"
+    >
+        <input
+                id="messageInput"
+                name="message"
+                placeholder="Type your message here..."
+                th:class="userMessage"
+                type="text"
+        />
+        <button style="padding: 8px;" type="submit">Send</button>
+    </form>
+    <form
+            hx-on="htmx:afterRequest: handleAfterRequest(event)" hx-post="/logout">
+        <button style="padding: 8px;" type="submit">New session</button>
+
+    </form>
+</div>
+</body>
+</html>
