@@ -16,10 +16,6 @@ val MobyNameGenerator = NameGenerator {
     info.schnatterer.mobynamesgenerator.MobyNamesGenerator.getRandomName()
 }
 
-val RandomNameGenerator = NameGenerator {
-    UUID.randomUUID().toString()
-}
-
 /**
  * Session scoped object to hold conversation id for
  * Spring AI ChatMemory and system prompt,

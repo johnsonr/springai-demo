@@ -26,20 +26,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
 /**
- * Returns what we need to extract memories from,
- * e.g. recent messages
- */
-typealias UserContentExtractor = (a: AdvisedRequest) -> String
-
-val lastMessageUserContentExtractor: UserContentExtractor = {
-    it.userText.takeBefore("\n\n")
-}
-
-fun String.takeBefore(what: String): String {
-    return this.substringBefore(what)
-}
-
-/**
  * Save an upcoming performance mentioned by the user
  */
 class SavePerformanceAdvisor(
@@ -82,6 +68,9 @@ class SavePerformanceAdvisor(
         }
 
         executor.execute(backgroundTask)
+        // We're blocking here to change the response,
+        // but if we didn't want to do that,
+        // we could simply return and let the background task complete without blocking the main interaction
         if (performanceSaved.get()) {
             return AdvisedResponse.builder()
                 .withAdviseContext(advisedRequest.adviseContext)
@@ -118,7 +107,6 @@ class SavePerformanceAdvisor(
         return false
     }
 
-    // Lots of little private classes can be handy in your LLM interaction code
     private data class PerformanceResponse(
         val work: String? = null,
         val date: Date? = null,

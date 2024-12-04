@@ -17,6 +17,8 @@ import org.springframework.data.neo4j.core.Neo4jTemplate
 import org.springframework.stereotype.Service
 import springrod.music.advisors.SavePerformanceAdvisor
 import springrod.music.advisors.CountMentionsAdvisor
+import springrod.music.advisors.Topic
+import springrod.music.advisors.TopicGuardAdvisor
 import java.util.concurrent.Executor
 
 @Service
@@ -42,6 +44,10 @@ class ChatService(
                 CountMentionsAdvisor(
                     applicationEventPublisher = applicationEventPublisher,
                     neo4jTemplate = neo4jTemplate,
+                ),
+                TopicGuardAdvisor(
+                    chatModel = localChatModel,
+                    bannedTopics = setOf(Topic.POLITICS, Topic.RELIGION, Topic.SPORT),
                 ),
                 SavePerformanceAdvisor(
                     neo4jTemplate = neo4jTemplate,
