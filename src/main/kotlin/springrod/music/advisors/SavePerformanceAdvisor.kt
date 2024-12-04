@@ -8,6 +8,9 @@ import org.springframework.ai.chat.client.advisor.api.AdvisedResponse
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
 import org.springframework.ai.chat.client.entity
+import org.springframework.ai.chat.messages.AssistantMessage
+import org.springframework.ai.chat.model.ChatResponse
+import org.springframework.ai.chat.model.Generation
 
 import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.core.io.ClassPathResource
@@ -19,6 +22,8 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 import org.springframework.retry.support.RetryTemplate
 import org.springframework.retry.support.RetryTemplateBuilder
 import java.util.Date
+import java.util.concurrent.Callable
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
 /**
@@ -63,16 +68,34 @@ class SavePerformanceAdvisor(
         chain: CallAroundAdvisorChain
     ): AdvisedResponse {
         // Allow for flaky model
+        val completableFuture = CompletableFuture<Boolean>()
+
         val backgroundTask = Runnable {
             try {
-                retryTemplate.execute<Boolean, Throwable> {
+                val result = retryTemplate.execute<Boolean, Throwable> {
                     extractMemoryIfPossible(userContentExtractor.invoke(advisedRequest))
                 }
+                completableFuture.complete(result)
             } catch (t: Throwable) {
                 logger.error("We tried really hard but the model kept failing. Don't fail the advisor chain", t)
+                completableFuture.complete(false)
             }
         }
+
         executor.execute(backgroundTask)
+        val result: Boolean = completableFuture.get()
+
+        if (result) {
+            return AdvisedResponse.builder()
+                .withAdviseContext(advisedRequest.adviseContext)
+                .withResponse(
+                    ChatResponse.builder().withGenerations(
+                        listOf(Generation(AssistantMessage("I've saved that performance for you.")))
+                    )
+                        .build()
+                )
+                .build()
+        }
         return chain.nextAroundCall(advisedRequest)
     }
 
