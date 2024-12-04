@@ -54,7 +54,7 @@ class ChatService(
                     vectorStore,
                     SearchRequest.defaults().withSimilarityThreshold(.8)
                 ),
-//                // Edit application.properties to show log messages from this advisor
+               // Edit application.properties to show log messages from this advisor
                 SimpleLoggerAdvisor(),
             )
             .defaultSystem(conversationSession.promptResource())
