@@ -12,6 +12,8 @@
 
 target/
 
+out/
+
 # Package Files #
 *.jar
 *.war
