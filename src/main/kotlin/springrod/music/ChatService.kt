@@ -28,7 +28,7 @@ class ChatService(
     private val neo4jTemplate: Neo4jTemplate,
     private val executor: Executor,
     private val applicationEventPublisher: ApplicationEventPublisher,
-    @Qualifier("listPopularThings") private val listPopularThings: FunctionCallback,
+    private val contextFunctions: List<FunctionCallback>,
 ) {
 
     /**
@@ -45,8 +45,8 @@ class ChatService(
                     neo4jTemplate = neo4jTemplate,
                 ),
                 CaptureMemoryAdvisor(
+                    neo4jTemplate = neo4jTemplate,
                     chatModel = localChatModel,
-                    vectorStore = vectorStore,
                     executor = executor,
                 ),
                 // Out of the box advisor, handles RAG
@@ -56,12 +56,12 @@ class ChatService(
                         .withSimilarityThreshold(.2)
                         .withTopK(6)
                 ),
-               // Edit application.properties to show log messages from this advisor
+                // Edit application.properties to show log messages from this advisor
                 SimpleLoggerAdvisor(),
             )
             .defaultSystem(conversationSession.promptResource())
             .defaultFunctions(
-                listPopularThings
+                *contextFunctions.toTypedArray()
             )
             .build()
     }

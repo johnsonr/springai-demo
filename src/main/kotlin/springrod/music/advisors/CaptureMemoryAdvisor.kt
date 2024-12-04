@@ -3,6 +3,7 @@ package springrod.music.advisors
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY
 import org.springframework.ai.chat.client.advisor.api.AdvisedRequest
 import org.springframework.ai.chat.client.advisor.api.AdvisedResponse
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
@@ -11,22 +12,26 @@ import org.springframework.ai.chat.messages.Message
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.client.entity
 
-import org.springframework.ai.document.Document
 import org.springframework.ai.ollama.OllamaChatModel
-import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.core.io.ClassPathResource
+import org.springframework.data.annotation.Id
+import org.springframework.data.neo4j.core.Neo4jTemplate
+import org.springframework.data.neo4j.core.schema.GeneratedValue
+import org.springframework.data.neo4j.core.schema.Node
+import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 import org.springframework.retry.support.RetryTemplate
 import org.springframework.retry.support.RetryTemplateBuilder
+import java.util.Date
 import java.util.concurrent.Executor
 
 /**
  * Returns what we need to extract memories from,
  * e.g. recent messages
  */
-typealias UserContentExtractor = (a: AdvisedRequest) -> List<Message>
+typealias UserContentExtractor = (a: AdvisedRequest) -> String
 
 val lastMessageUserContentExtractor: UserContentExtractor = {
-    listOf(UserMessage(it.userText.takeBefore("\n\n")))
+    it.userText.takeBefore("\n\n")
 }
 
 fun String.takeBefore(what: String): String {
@@ -37,7 +42,7 @@ fun String.takeBefore(what: String): String {
  * Capture a memory, similar to OpenAI memory feature
  */
 class CaptureMemoryAdvisor(
-    private val vectorStore: VectorStore,
+    private val neo4jTemplate: Neo4jTemplate,
     chatModel: OllamaChatModel,
     private val executor: Executor,
     private val userContentExtractor: UserContentExtractor = lastMessageUserContentExtractor,
@@ -49,7 +54,6 @@ class CaptureMemoryAdvisor(
 
     private val chatClient = ChatClient
         .builder(chatModel)
-        .defaultSystem(ClassPathResource("prompts/capture_memory.md"))
         .build()
 
     /**
@@ -79,37 +83,39 @@ class CaptureMemoryAdvisor(
 
     override fun getOrder() = 0
 
-    private fun extractMemoryIfPossible(messages: List<Message>): Boolean {
+    private fun extractMemoryIfPossible(userContent: String): Boolean {
         // Independent LLM call
-        val memoryLlmResponse = chatClient
+        val performanceResponse = chatClient
             .prompt()
-            .messages(messages)
+            .user(ClassPathResource("prompts/capture_memory.md"))
+            .user { it.param("content", userContent) }
+            .user { it.param("now", Date()) }
             .call()
-            .entity<MemoryLlmResponse>()
-        if (memoryLlmResponse.worthKeeping() == true) {
-            logger.info("Adding memory: {}", memoryLlmResponse)
-            vectorStore.add(
-                listOf(
-                    Document(
-                        """
-                    Remember this about the user:
-                    ${memoryLlmResponse.content}
-                """.trimIndent()
-                    )
-                )
-            )
+            .entity<PerformanceResponse>()
+        performanceResponse.performance?.let {
+            logger.info("Adding performance: {}", it)
+            neo4jTemplate.save(it)
             return true
         }
-        logger.info("Ignoring useless potential memory: {}", memoryLlmResponse)
+        logger.info("No performance information in: {}", performanceResponse)
         return false
     }
 
     // Lots of little private classes can be handy in your LLM interaction code
-    private data class MemoryLlmResponse(
-        val content: String? = null,
-        val useful: Boolean,
+    private data class PerformanceResponse(
+        val work: String? = null,
+        val date: Date? = null,
     ) {
-        fun worthKeeping() = useful && content != null
+        val performance: Performance? =
+            if (work != null && date != null) Performance(work, date) else null
     }
 
 }
+
+@Node
+data class Performance(
+    val work: String,
+    val date: Date,
+    @Id @GeneratedValue(UUIDStringGenerator::class)
+    private val id: String? = null,
+)

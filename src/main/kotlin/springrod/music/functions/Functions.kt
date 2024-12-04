@@ -9,10 +9,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.Neo4jTemplate
 import springrod.music.advisors.MentionType
 import springrod.music.advisors.Mentions
+import springrod.music.advisors.Performance
 
 
 data class PopularityRequest(val topK: Int = 5, val type: MentionType)
 data class PopularityResponse(val top: List<Mentions>)
+
+data class PerformanceRequest(val number: Int = 10)
+data class PerformanceResponse(val upcoming: List<Performance>)
 
 @Configuration
 class Functions(
@@ -29,7 +33,7 @@ class Functions(
             ) { request: PopularityRequest ->
                 logger.info("Listing popular ${request.type}s")
                 PopularityResponse(
-                    top = neo4jTemplate.findAll<Mentions>(Mentions::class.java)
+                    top = neo4jTemplate.findAll(Mentions::class.java)
                         .filter { it.type == request.type }
                         .sortedByDescending { it.count }
                         .take(request.topK)
@@ -37,6 +41,25 @@ class Functions(
             }
             .inputType(PopularityRequest::class.java)
             .description("List popular things. Invoke when the user asks which are popular composers or instruments or performers.")
+            .objectMapper(ObjectMapper().registerKotlinModule())
+            .build()
+
+    @Bean
+    fun upcomingPerformances(): FunctionCallback =
+        FunctionCallback.builder()
+            .function<PerformanceRequest, PerformanceResponse>(
+                "listPerformances"
+            ) {
+                val pr = PerformanceResponse(
+                    upcoming = neo4jTemplate.findAll(Performance::class.java)
+                        .sortedBy { it.date }
+                        .take(it.number)
+                )
+                logger.info("Upcoming performances request $it returned $pr")
+                pr
+            }
+            .inputType(PerformanceRequest::class.java)
+            .description("Find upcoming performances.")
             .objectMapper(ObjectMapper().registerKotlinModule())
             .build()
 
