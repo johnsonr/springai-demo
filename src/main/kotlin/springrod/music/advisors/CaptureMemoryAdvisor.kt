@@ -11,9 +11,11 @@ import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
 import org.springframework.ai.chat.messages.Message
 import org.springframework.ai.chat.messages.UserMessage
+import org.springframework.ai.chat.client.entity
+
 import org.springframework.ai.chat.model.ChatModel
-import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.document.Document
+import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.core.io.ClassPathResource
 import org.springframework.retry.support.RetryTemplate
@@ -27,7 +29,11 @@ import java.util.concurrent.Executor
 typealias MemoryBasisExtractor = (a: AdvisedRequest) -> List<Message>
 
 val lastMessageMemoryBasisExtractor: MemoryBasisExtractor = {
-    listOf(UserMessage(it.userText))
+    listOf(UserMessage(it.userText.takeBefore("\n\n")))
+}
+
+fun String.takeBefore(what: String): String {
+    return this.substringBefore(what)
 }
 
 /**
@@ -35,7 +41,7 @@ val lastMessageMemoryBasisExtractor: MemoryBasisExtractor = {
  */
 class CaptureMemoryAdvisor(
     private val vectorStore: VectorStore,
-    chatModel: ChatModel,
+    chatModel: OllamaChatModel,
     private val executor: Executor,
     private val memoryBasisExtractor: MemoryBasisExtractor = lastMessageMemoryBasisExtractor,
     private val retryTemplate: RetryTemplate =
@@ -48,9 +54,6 @@ class CaptureMemoryAdvisor(
         .builder(chatModel)
         .defaultSystem(ClassPathResource("prompts/capture_memory.md"))
         .build()
-
-    // Make sure Jackson can bind Kotlin
-    private val kotlinAwareObjectMapper = ObjectMapper().registerKotlinModule()
 
     /**
      * We don't change the request, we merely look at it.
@@ -65,7 +68,7 @@ class CaptureMemoryAdvisor(
         val backgroundTask = Runnable {
             try {
                 retryTemplate.execute<Boolean, Throwable> {
-                    extractMemoryIfPossible(advisedRequest)
+                    extractMemoryIfPossible(memoryBasisExtractor.invoke(advisedRequest))
                 }
             } catch (t: Throwable) {
                 logger.error("We tried really hard but the model kept failing. Don't fail the advisor chain", t)
@@ -79,18 +82,13 @@ class CaptureMemoryAdvisor(
 
     override fun getOrder(): Int = 0
 
-    private fun extractMemoryIfPossible(request: AdvisedRequest): Boolean {
+    private fun extractMemoryIfPossible(messages:List<Message>): Boolean {
         val memoryLlmResponse = chatClient
             .prompt()
-            .messages(memoryBasisExtractor.invoke(request))
+            .messages(messages)
             .call()
-            .entity(
-                BeanOutputConverter(
-                    MemoryLlmResponse::class.java,
-                    kotlinAwareObjectMapper,
-                )
-            )
-        if (memoryLlmResponse?.worthKeeping() == true) {
+            .entity<MemoryLlmResponse>()
+        if (memoryLlmResponse.worthKeeping() == true) {
             logger.info("Adding memory: {}", memoryLlmResponse)
             vectorStore.add(
                 listOf(
