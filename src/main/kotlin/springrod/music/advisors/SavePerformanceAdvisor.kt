@@ -3,13 +3,10 @@ package springrod.music.advisors
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY
 import org.springframework.ai.chat.client.advisor.api.AdvisedRequest
 import org.springframework.ai.chat.client.advisor.api.AdvisedResponse
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
-import org.springframework.ai.chat.messages.Message
-import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.client.entity
 
 import org.springframework.ai.ollama.OllamaChatModel
@@ -39,9 +36,9 @@ fun String.takeBefore(what: String): String {
 }
 
 /**
- * Capture a memory, similar to OpenAI memory feature
+ * Save an upcoming performance mentioned by the user
  */
-class CaptureMemoryAdvisor(
+class SavePerformanceAdvisor(
     private val neo4jTemplate: Neo4jTemplate,
     chatModel: OllamaChatModel,
     private val executor: Executor,
@@ -50,7 +47,7 @@ class CaptureMemoryAdvisor(
         RetryTemplateBuilder().maxAttempts(3).fixedBackoff(1000).build()
 ) : CallAroundAdvisor {
 
-    private val logger: Logger = LoggerFactory.getLogger(CaptureMemoryAdvisor::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(SavePerformanceAdvisor::class.java)
 
     private val chatClient = ChatClient
         .builder(chatModel)
@@ -79,7 +76,7 @@ class CaptureMemoryAdvisor(
         return chain.nextAroundCall(advisedRequest)
     }
 
-    override fun getName(): String = CaptureMemoryAdvisor::class.java.simpleName
+    override fun getName(): String = SavePerformanceAdvisor::class.java.simpleName
 
     override fun getOrder() = 0
 
@@ -87,7 +84,8 @@ class CaptureMemoryAdvisor(
         // Independent LLM call
         val performanceResponse = chatClient
             .prompt()
-            .user(ClassPathResource("prompts/capture_memory.md"))
+            .user(ClassPathResource("prompts/save_performance.md"))
+            // Prompt that go into template rendering
             .user { it.param("content", userContent) }
             .user { it.param("now", Date()) }
             .call()
@@ -97,7 +95,6 @@ class CaptureMemoryAdvisor(
             neo4jTemplate.save(it)
             return true
         }
-        logger.info("No performance information in: {}", performanceResponse)
         return false
     }
 

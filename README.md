@@ -1,4 +1,6 @@
-# Spring AI Demo for Spring One 2024
+# Spring AI Demo
+
+Updated for YOW! Australia, December 2024.
 
 ![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)
 ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white)
@@ -8,21 +10,21 @@
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![IntelliJ IDEA](https://img.shields.io/badge/IntelliJIDEA-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)
 
-Kotlin project with a simple [HTMX](https://htmx.org/) UI, demonstrating Spring AI with Ollama, Open AI and Neo4j.
+Kotlin demo project with a simple [HTMX](https://htmx.org/) UI, demonstrating Spring AI with Ollama, Open AI and Neo4j.
 Shows:
 
+- RAG using Spring AI's out of the box `QuestionAnswerAdvisor`
 - Mixing LLMs in a single application. **Use the right LLM for each requirement.**
 - The power of [Spring AI](https://github.com/spring-projects/spring-ai) advisors to instrument chats in a reusable way
-- The power of integrating LLM calls within a Spring application.
+- The power of integrating LLM calls within a Spring application by exposing Spring beans as LLM-accessible _functions_.
 
 This project features the following custom advisors:
 
-- `CaptureMemoryAdvisor`: Simple take on the ChatGPT concept of capturing memories. Uses a small model (`gemma2:2b` by
-  default) to try to find useful memories in the latest user message. When it finds one it saves a Document to the
-  `VectorStore` so it can be brought into the context in this or future chats. So if you tell the bot your favorite
-  color is green, it will remember in future chats. Memory extraction runs asynchronously, so it doesn't slow responding
+- `CountMentionsAdvisor`: Detects when a topic is mentioned in a chat and increments an entity counter and raises an
+  application event
+- `SavePerformanceAdvisor`: Remembers mentions of upcoming performances and saves them to the database. Extraction runs
+  asynchronously, so it doesn't slow responding
   to the user.
-- `CountMentionsAdvisor`: Detects when a topic is mentioned in a chat and raises an application event
 
 This project illustrates the following best practices:
 
@@ -66,10 +68,11 @@ so it's simplistic.
 
 In particular:
 
-- The `CaptureMemoryAdvisor` works off the latest user message only (although this is extracted into a strategy
+- The `SavePerformanceAdvisor` works off the latest user message only (although this is extracted into a strategy
   function)
 - The `CountMentionsAdvisor` looks for a literal string. This could easily be improved to work with a local model and
-  exhibit deeper understanding (e.g. "the user is talking about auto service")
+  exhibit deeper understanding (e.g. "the user is talking about auto service"). It's also inefficient as it scans all
+  `Mention` entities on every request.
 - The UI is very basic
 
 Contributions welcome.

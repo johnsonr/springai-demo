@@ -12,11 +12,10 @@ import org.springframework.ai.model.function.FunctionCallback
 import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.neo4j.core.Neo4jTemplate
 import org.springframework.stereotype.Service
-import springrod.music.advisors.CaptureMemoryAdvisor
+import springrod.music.advisors.SavePerformanceAdvisor
 import springrod.music.advisors.CountMentionsAdvisor
 import java.util.concurrent.Executor
 
@@ -44,7 +43,7 @@ class ChatService(
                     applicationEventPublisher = applicationEventPublisher,
                     neo4jTemplate = neo4jTemplate,
                 ),
-                CaptureMemoryAdvisor(
+                SavePerformanceAdvisor(
                     neo4jTemplate = neo4jTemplate,
                     chatModel = localChatModel,
                     executor = executor,
