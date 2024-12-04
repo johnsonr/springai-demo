@@ -102,9 +102,14 @@ class SavePerformanceAdvisor(
     private data class PerformanceResponse(
         val work: String? = null,
         val date: Date? = null,
+        val composer: String? = null,
     ) {
         val performance: Performance? =
-            if (work != null && date != null) Performance(work, date) else null
+            if (work != null && composer != null && date != null) Performance(
+                work = work,
+                composer = composer,
+                date = date,
+            ) else null
     }
 
 }
@@ -112,6 +117,7 @@ class SavePerformanceAdvisor(
 @Node
 data class Performance(
     val work: String,
+    val composer: String,
     val date: Date,
     @Id @GeneratedValue(UUIDStringGenerator::class)
     private val id: String? = null,

@@ -32,6 +32,8 @@ This project illustrates the following best practices:
   be externalized so they can be edited easily and potentially shared.
 - _Mix multiple models_, using the best (or cheapest) LLM for each task.
 - Enable reuse via advisors, analogous to aspects in AOP
+- Return entities from the LLM
+- Use structured persistent data as well as vector search
 - _Write in Kotlin_!
 
 ## Setup
