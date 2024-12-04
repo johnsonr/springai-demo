@@ -1,7 +1,5 @@
 package springrod.music.advisors
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
@@ -13,7 +11,6 @@ import org.springframework.ai.chat.messages.Message
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.client.entity
 
-import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.document.Document
 import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.ai.vectorstore.VectorStore
@@ -26,9 +23,9 @@ import java.util.concurrent.Executor
  * Returns what we need to extract memories from,
  * e.g. recent messages
  */
-typealias MemoryBasisExtractor = (a: AdvisedRequest) -> List<Message>
+typealias UserContentExtractor = (a: AdvisedRequest) -> List<Message>
 
-val lastMessageMemoryBasisExtractor: MemoryBasisExtractor = {
+val lastMessageUserContentExtractor: UserContentExtractor = {
     listOf(UserMessage(it.userText.takeBefore("\n\n")))
 }
 
@@ -43,7 +40,7 @@ class CaptureMemoryAdvisor(
     private val vectorStore: VectorStore,
     chatModel: OllamaChatModel,
     private val executor: Executor,
-    private val memoryBasisExtractor: MemoryBasisExtractor = lastMessageMemoryBasisExtractor,
+    private val userContentExtractor: UserContentExtractor = lastMessageUserContentExtractor,
     private val retryTemplate: RetryTemplate =
         RetryTemplateBuilder().maxAttempts(3).fixedBackoff(1000).build()
 ) : CallAroundAdvisor {
@@ -68,7 +65,7 @@ class CaptureMemoryAdvisor(
         val backgroundTask = Runnable {
             try {
                 retryTemplate.execute<Boolean, Throwable> {
-                    extractMemoryIfPossible(memoryBasisExtractor.invoke(advisedRequest))
+                    extractMemoryIfPossible(userContentExtractor.invoke(advisedRequest))
                 }
             } catch (t: Throwable) {
                 logger.error("We tried really hard but the model kept failing. Don't fail the advisor chain", t)
@@ -80,9 +77,10 @@ class CaptureMemoryAdvisor(
 
     override fun getName(): String = CaptureMemoryAdvisor::class.java.simpleName
 
-    override fun getOrder(): Int = 0
+    override fun getOrder() = 0
 
-    private fun extractMemoryIfPossible(messages:List<Message>): Boolean {
+    private fun extractMemoryIfPossible(messages: List<Message>): Boolean {
+        // Independent LLM call
         val memoryLlmResponse = chatClient
             .prompt()
             .messages(messages)

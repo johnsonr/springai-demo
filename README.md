@@ -15,15 +15,6 @@ Shows:
 - The power of [Spring AI](https://github.com/spring-projects/spring-ai) advisors to instrument chats in a reusable way
 - The power of integrating LLM calls within a Spring application.
 
-## Flow
-
-1. Add conversation memory
-2. Teach about the store (RAG)
-3. Count user mentions of a topic
-4. Count user mentions (function)
-5. Take action (functions)
-6. Evolve personality
-
 This project features the following custom advisors:
 
 - `CaptureMemoryAdvisor`: Simple take on the ChatGPT concept of capturing memories. Uses a small model (`gemma2:2b` by
@@ -31,16 +22,15 @@ This project features the following custom advisors:
   `VectorStore` so it can be brought into the context in this or future chats. So if you tell the bot your favorite
   color is green, it will remember in future chats. Memory extraction runs asynchronously, so it doesn't slow responding
   to the user.
-- `NoteMentionsAdvisor`: Detects when a topic is mentioned in a chat and raises an application event
+- `CountMentionsAdvisor`: Detects when a topic is mentioned in a chat and raises an application event
 
 This project illustrates the following best practices:
 
 - _Externalize your prompts_. Prompts should not be in Kotlin, Java, Python/whatever programming language. They should
   be externalized so they can be edited easily and potentially shared.
-- _Favor explicit configuration of Spring AI vs relying on starters_. This project uses only the Neo vector store
-  starter, as we want only one vector store. But it explicitly configures the Ollama and Open AI models in an
-  `@Configuration` file. This allows us to mix and switch models easily.
+- _Mix multiple models_, using the best (or cheapest) LLM for each task.
 - Enable reuse via advisors, analogous to aspects in AOP
+- _Write in Kotlin_!
 
 ## Setup
 
@@ -78,7 +68,7 @@ In particular:
 
 - The `CaptureMemoryAdvisor` works off the latest user message only (although this is extracted into a strategy
   function)
-- The `NoteMentionsAdvisor` looks for a literal string. This could easily be improved to work with a local model and
+- The `CountMentionsAdvisor` looks for a literal string. This could easily be improved to work with a local model and
   exhibit deeper understanding (e.g. "the user is talking about auto service")
 - The UI is very basic
 

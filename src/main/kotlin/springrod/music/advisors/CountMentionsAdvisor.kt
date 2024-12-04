@@ -51,7 +51,9 @@ class CountMentionsAdvisor(
             mentions
         )
         val mention = neo4jTemplate.findById(mentions.name, Mentions::class.java)
-        neo4jTemplate.save(mention.getOrNull()!!.increment())
+        mention.getOrNull()?.let {
+            neo4jTemplate.save(it.increment())
+        }
     }
 
     override fun getName(): String = "NoteMentions"
