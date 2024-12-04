@@ -59,7 +59,7 @@ class Functions(
                 pr
             }
             .inputType(PerformanceRequest::class.java)
-            .description("Find upcoming performances.")
+            .description("Find upcoming performances. Invoke if a user asks for upcoming performances.")
             .objectMapper(ObjectMapper().registerKotlinModule())
             .build()
 

@@ -9,10 +9,10 @@ import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
 import org.springframework.ai.chat.client.entity
 import org.springframework.ai.chat.messages.AssistantMessage
+import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
 import org.springframework.ai.chat.model.Generation
 
-import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.core.io.ClassPathResource
 import org.springframework.data.annotation.Id
 import org.springframework.data.neo4j.core.Neo4jTemplate
@@ -22,7 +22,6 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 import org.springframework.retry.support.RetryTemplate
 import org.springframework.retry.support.RetryTemplateBuilder
 import java.util.Date
-import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
@@ -45,7 +44,7 @@ fun String.takeBefore(what: String): String {
  */
 class SavePerformanceAdvisor(
     private val neo4jTemplate: Neo4jTemplate,
-    chatModel: OllamaChatModel,
+    chatModel: ChatModel,
     private val executor: Executor,
     private val userContentExtractor: UserContentExtractor = lastMessageUserContentExtractor,
     private val retryTemplate: RetryTemplate =
@@ -67,30 +66,28 @@ class SavePerformanceAdvisor(
         advisedRequest: AdvisedRequest,
         chain: CallAroundAdvisorChain
     ): AdvisedResponse {
-        // Allow for flaky model
-        val completableFuture = CompletableFuture<Boolean>()
+        val performanceSaved = CompletableFuture<Boolean>()
 
         val backgroundTask = Runnable {
             try {
+                // Allow for flaky model
                 val result = retryTemplate.execute<Boolean, Throwable> {
-                    extractMemoryIfPossible(userContentExtractor.invoke(advisedRequest))
+                    performanceWasSaved(userContentExtractor.invoke(advisedRequest))
                 }
-                completableFuture.complete(result)
+                performanceSaved.complete(result)
             } catch (t: Throwable) {
                 logger.error("We tried really hard but the model kept failing. Don't fail the advisor chain", t)
-                completableFuture.complete(false)
+                performanceSaved.complete(false)
             }
         }
 
         executor.execute(backgroundTask)
-        val result: Boolean = completableFuture.get()
-
-        if (result) {
+        if (performanceSaved.get()) {
             return AdvisedResponse.builder()
                 .withAdviseContext(advisedRequest.adviseContext)
                 .withResponse(
                     ChatResponse.builder().withGenerations(
-                        listOf(Generation(AssistantMessage("I've saved that performance for you.")))
+                        listOf(Generation(AssistantMessage("Thank you! I've made a note of that performance.")))
                     )
                         .build()
                 )
@@ -103,7 +100,7 @@ class SavePerformanceAdvisor(
 
     override fun getOrder() = 0
 
-    private fun extractMemoryIfPossible(userContent: String): Boolean {
+    private fun performanceWasSaved(userContent: String): Boolean {
         // Independent LLM call
         val performanceResponse = chatClient
             .prompt()

@@ -45,7 +45,8 @@ class ChatService(
                 ),
                 SavePerformanceAdvisor(
                     neo4jTemplate = neo4jTemplate,
-                    chatModel = localChatModel,
+//                    chatModel = localChatModel,
+                    chatModel = chatModel,
                     executor = executor,
                 ),
                 // Out of the box advisor, handles RAG
