@@ -47,6 +47,7 @@ class CountMentionsAdvisor(
     }
 
     private fun noteMention(mentions: Mentions) {
+        // Tie into Spring container functionality
         applicationEventPublisher.publishEvent(
             mentions
         )

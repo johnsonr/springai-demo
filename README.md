@@ -20,6 +20,7 @@ Shows:
 
 This project features the following custom advisors:
 
+- `TopicGuardAdvisor`: Classifies user input and short-circuits to give a canned response if it's about a banned topic
 - `CountMentionsAdvisor`: Detects when a topic is mentioned in a chat and increments an entity counter and raises an
   application event
 - `SavePerformanceAdvisor`: Remembers mentions of upcoming performances and saves them to the database. Extraction runs
