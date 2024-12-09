@@ -1,5 +1,7 @@
 package springrod.music
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY
 import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY
@@ -32,6 +34,8 @@ class ChatService(
     private val contextFunctions: List<FunctionCallback>,
 ) {
 
+    private val logger: Logger = LoggerFactory.getLogger(ChatService::class.java)
+
     /**
      * Some advisors depend on session state
      */
@@ -44,6 +48,11 @@ class ChatService(
                 CountMentionsAdvisor(
                     applicationEventPublisher = applicationEventPublisher,
                     neo4jTemplate = neo4jTemplate,
+                ),
+                SavePerformanceAdvisor(
+                    chatModel = chatModel,
+                    neo4jTemplate = neo4jTemplate,
+                    executor = executor,
                 ),
                 TopicGuardAdvisor(
                     chatModel = localChatModel,
@@ -75,6 +84,7 @@ class ChatService(
             .user(userMessage)
             .call()
             .chatResponse()!!
+        logger.info("ChatResponse: $chatResponse")
         return chatResponse
     }
 }

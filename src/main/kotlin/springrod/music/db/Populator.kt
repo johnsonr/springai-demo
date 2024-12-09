@@ -1,4 +1,4 @@
-package springrod.music
+package springrod.music.db
 
 import org.slf4j.LoggerFactory
 import org.springframework.ai.document.Document
@@ -40,7 +40,7 @@ class Populator(
 
     @EventListener(ApplicationReadyEvent::class)
     fun onApplicationReady() {
-        logger.info("Populating database if necessary")
+        logger.info("Populating database if necessary. Data additions will be logged.")
         populateVectorDatabase()
         populateMentions()
     }

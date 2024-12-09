@@ -12,12 +12,22 @@ import springrod.music.advisors.Mentions
 import springrod.music.advisors.Performance
 
 
+/**
+ * Function payload
+ */
 data class PopularityRequest(val topK: Int = 5, val type: MentionType)
+
+/**
+ * Function response
+ */
 data class PopularityResponse(val top: List<Mentions>)
 
 data class PerformanceRequest(val number: Int = 10)
 data class PerformanceResponse(val upcoming: List<Performance>)
 
+/**
+ * Functions that will be exposed using Spring AI
+ */
 @Configuration
 class Functions(
     private val neo4jTemplate: Neo4jTemplate,

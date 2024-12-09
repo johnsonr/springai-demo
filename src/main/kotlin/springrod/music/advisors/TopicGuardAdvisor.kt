@@ -86,7 +86,7 @@ class TopicGuardAdvisor(
     override fun getOrder() = 0
 
     private fun isBannedTopic(userContent: String): Boolean {
-        // Independent LLM call
+        // Independent LLM call, potentially using a different model
         val topicClassification = chatClient
             .prompt()
             .user(ClassPathResource("prompts/topic_guard.md"))

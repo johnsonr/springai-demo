@@ -1,4 +1,4 @@
-package springrod.music
+package springrod.music.db
 
 import org.neo4j.cypherdsl.core.renderer.Dialect
 import org.springframework.context.annotation.Bean
