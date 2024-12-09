@@ -29,8 +29,10 @@
 
 <div class="input">
     <form
-            hx-on="htmx:afterRequest: handleAfterRequest(event)" hx-put="/messages"
+            hx-on="htmx:afterRequest: handleAfterRequest(event)"
+            hx-put="/messages"
             hx-target="#messageList"
+            autocomplete="off"
     >
         <input
                 id="messageInput"

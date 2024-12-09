@@ -42,12 +42,14 @@ class Functions(
                 "listPopularThings"
             ) { request: PopularityRequest ->
                 logger.info("Listing popular ${request.type}s")
-                PopularityResponse(
+                val pr = PopularityResponse(
                     top = neo4jTemplate.findAll(Mentions::class.java)
                         .filter { it.type == request.type }
                         .sortedByDescending { it.count }
                         .take(request.topK)
                 )
+                logger.info("Popular things request $request returned $pr")
+                pr
             }
             .inputType(PopularityRequest::class.java)
             .description("List popular things. Invoke when the user asks which are popular composers or instruments or performers.")
