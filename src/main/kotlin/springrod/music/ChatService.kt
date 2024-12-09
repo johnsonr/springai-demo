@@ -49,12 +49,6 @@ class ChatService(
                     chatModel = localChatModel,
                     bannedTopics = setOf(Topic.POLITICS, Topic.RELIGION, Topic.SPORT),
                 ),
-                SavePerformanceAdvisor(
-                    neo4jTemplate = neo4jTemplate,
-//                    chatModel = localChatModel,
-                    chatModel = chatModel,
-                    executor = executor,
-                ),
                 // Out of the box advisor, handles RAG
                 QuestionAnswerAdvisor(
                     vectorStore,
@@ -62,13 +56,11 @@ class ChatService(
                         .withSimilarityThreshold(.2)
                         .withTopK(6)
                 ),
-                // Edit application.properties to show log messages from this advisor
-                SimpleLoggerAdvisor(),
             )
-            .defaultSystem(conversationSession.promptResource())
             .defaultFunctions(
                 *contextFunctions.toTypedArray()
             )
+            .defaultSystem(conversationSession.promptResource())
             .build()
     }
 

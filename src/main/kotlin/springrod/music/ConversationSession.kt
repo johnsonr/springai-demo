@@ -39,6 +39,5 @@ class ConversationSession(
     fun promptResource(): Resource {
         return ClassPathResource(promptPath)
     }
-
-
+    
 }
