@@ -28,8 +28,8 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <kotlin.version>2.0.0</kotlin.version>
-        <spring-ai.version>1.0.0</spring-ai.version>
+        <kotlin.version>2.3.10</kotlin.version>
+        <spring-ai.version>1.1.2</spring-ai.version>
     </properties>
     <dependencies>
         <dependency>
@@ -56,7 +56,7 @@
         <!-- Use starter here as we want only one vector store -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-neo4j-store-spring-boot-starter</artifactId>
+            <artifactId>spring-ai-starter-vector-store-neo4j</artifactId>
         </dependency>
 
         <!-- Do not use a starter so that we can have multiple ChatModels -->
