@@ -30,16 +30,18 @@ class ChatConfiguration {
     @Primary
     @Bean
     fun premiumChatModel(@Value("\${OPENAI_API_KEY}") apiKey: String): ChatModel {
-        return OpenAiChatModel(OpenAiApi(apiKey))
+        return OpenAiChatModel.builder()
+            .openAiApi(OpenAiApi.builder().apiKey(apiKey).build())
+            .build()
     }
 
     @Bean
     fun localChatModel(): OllamaChatModel {
         return OllamaChatModel.builder()
-            .withOllamaApi(OllamaApi())
-            .withDefaultOptions(
+            .ollamaApi(OllamaApi())
+            .defaultOptions(
                 OllamaOptions.builder()
-                    .withModel("gemma2:2b")
+                    .model("gemma3:1b")
                     .build()
             )
             .build()
@@ -49,12 +51,12 @@ class ChatConfiguration {
     @Primary
     fun embeddingModel(): EmbeddingModel {
         return OllamaEmbeddingModel.builder()
-            .withOllamaApi(
+            .ollamaApi(
                 OllamaApi()
             )
-            .withDefaultOptions(
+            .defaultOptions(
                 OllamaOptions.builder()
-                    .withModel("gemma2:2b")
+                    .model("gemma3:1b")
                     .build()
             ).build()
     }

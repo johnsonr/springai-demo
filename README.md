@@ -52,10 +52,10 @@ or otherwise change the Neo credentials in `application.properties`
 to use your own database.
 
 Run [Ollama](https://ollama.com/) on your machine.
-Make sure you've pulled the `gemma2:2b` model as follows:
+Make sure you've pulled the `gemma3:1b` model as follows:
 
 ```bash
-docker pull ollama/gemma2:2b
+ollama pull gemma3:1b
 ```
 
 Edit `ChatConfiguration.kt` to use a different Ollama model if you prefer.
