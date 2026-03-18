@@ -3,14 +3,12 @@ package springrod.music
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY
-import org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
-import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor
+import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
-import org.springframework.ai.model.function.FunctionCallback
+import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
@@ -31,7 +29,7 @@ class ChatService(
     private val neo4jTemplate: Neo4jTemplate,
     private val executor: Executor,
     private val applicationEventPublisher: ApplicationEventPublisher,
-    private val contextFunctions: List<FunctionCallback>,
+    private val contextFunctions: List<ToolCallback>,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(ChatService::class.java)
@@ -44,7 +42,7 @@ class ChatService(
             .builder(chatModel)
             .defaultAdvisors(
                 // Out of the box advisor, adds conversation memory
-                MessageChatMemoryAdvisor(conversationSession.chatMemory),
+                MessageChatMemoryAdvisor.builder(conversationSession.chatMemory).build(),
                 CountMentionsAdvisor(
                     applicationEventPublisher = applicationEventPublisher,
                     neo4jTemplate = neo4jTemplate,
@@ -59,14 +57,16 @@ class ChatService(
                     bannedTopics = setOf(Topic.POLITICS, Topic.RELIGION, Topic.SPORT),
                 ),
                 // Out of the box advisor, handles RAG
-                QuestionAnswerAdvisor(
-                    vectorStore,
-                    SearchRequest.defaults()
-                        .withSimilarityThreshold(.2)
-                        .withTopK(6)
-                ),
+                QuestionAnswerAdvisor.builder(vectorStore)
+                    .searchRequest(
+                        SearchRequest.builder()
+                            .similarityThreshold(.2)
+                            .topK(6)
+                            .build()
+                    )
+                    .build(),
             )
-            .defaultFunctions(
+            .defaultToolCallbacks(
                 *contextFunctions.toTypedArray()
             )
             .defaultSystem(conversationSession.promptResource())
@@ -79,8 +79,7 @@ class ChatService(
     ): ChatResponse {
         val chatResponse = chatClientForSession(conversationSession)
             .prompt()
-            .advisors { it.param(CHAT_MEMORY_CONVERSATION_ID_KEY, conversationSession.conversationId) }
-            .advisors { it.param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 50) }
+            .advisors { it.param(ChatMemory.CONVERSATION_ID, conversationSession.conversationId) }
             .user(userMessage)
             .call()
             .chatResponse()!!

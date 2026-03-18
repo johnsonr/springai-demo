@@ -3,10 +3,10 @@ package springrod.music.advisors
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.advisor.api.AdvisedRequest
-import org.springframework.ai.chat.client.advisor.api.AdvisedResponse
-import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
-import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
+import org.springframework.ai.chat.client.ChatClientRequest
+import org.springframework.ai.chat.client.ChatClientResponse
+import org.springframework.ai.chat.client.advisor.api.CallAdvisor
+import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
 import org.springframework.ai.chat.client.entity
 import org.springframework.ai.chat.messages.AssistantMessage
 import org.springframework.ai.chat.model.ChatModel
@@ -35,7 +35,7 @@ class SavePerformanceAdvisor(
     private val userContentExtractor: UserContentExtractor = lastMessageUserContentExtractor,
     private val retryTemplate: RetryTemplate =
         RetryTemplateBuilder().maxAttempts(3).fixedBackoff(1000).build()
-) : CallAroundAdvisor {
+) : CallAdvisor {
 
     private val logger: Logger = LoggerFactory.getLogger(SavePerformanceAdvisor::class.java)
 
@@ -48,17 +48,17 @@ class SavePerformanceAdvisor(
      * We perform the additional model call in the background so that
      * we can reply to the user without delay.
      */
-    override fun aroundCall(
-        advisedRequest: AdvisedRequest,
-        chain: CallAroundAdvisorChain
-    ): AdvisedResponse {
+    override fun adviseCall(
+        chatClientRequest: ChatClientRequest,
+        chain: CallAdvisorChain
+    ): ChatClientResponse {
         val performanceSaved = CompletableFuture<Boolean>()
 
         val backgroundTask = Runnable {
             try {
                 // Allow for flaky model
                 val result = retryTemplate.execute<Boolean, Throwable> {
-                    performanceWasSaved(userContentExtractor.invoke(advisedRequest))
+                    performanceWasSaved(userContentExtractor.invoke(chatClientRequest))
                 }
                 performanceSaved.complete(result)
             } catch (t: Throwable) {
@@ -72,17 +72,17 @@ class SavePerformanceAdvisor(
         // but if we didn't want to do that,
         // we could simply return and let the background task complete without blocking the main interaction
         if (performanceSaved.get()) {
-            return AdvisedResponse.builder()
-                .withAdviseContext(advisedRequest.adviseContext)
-                .withResponse(
-                    ChatResponse.builder().withGenerations(
+            return ChatClientResponse.builder()
+                .context(chatClientRequest.context())
+                .chatResponse(
+                    ChatResponse.builder().generations(
                         listOf(Generation(AssistantMessage("Thank you! I've made a note of that performance.")))
                     )
                         .build()
                 )
                 .build()
         }
-        return chain.nextAroundCall(advisedRequest)
+        return chain.nextCall(chatClientRequest)
     }
 
     override fun getName(): String = SavePerformanceAdvisor::class.java.simpleName

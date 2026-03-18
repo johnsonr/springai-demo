@@ -1,9 +1,8 @@
 package springrod.music.functions
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.slf4j.LoggerFactory
-import org.springframework.ai.model.function.FunctionCallback
+import org.springframework.ai.tool.ToolCallback
+import org.springframework.ai.tool.function.FunctionToolCallback
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.Neo4jTemplate
@@ -36,43 +35,39 @@ class Functions(
     private val logger = LoggerFactory.getLogger(Functions::class.java)
 
     @Bean
-    fun listPopularThings(): FunctionCallback =
-        FunctionCallback.builder()
-            .function<PopularityRequest, PopularityResponse>(
-                "listPopularThings"
-            ) { request: PopularityRequest ->
-                logger.info("Listing popular ${request.type}s")
-                val pr = PopularityResponse(
-                    top = neo4jTemplate.findAll(Mentions::class.java)
-                        .filter { it.type == request.type }
-                        .sortedByDescending { it.count }
-                        .take(request.topK)
-                )
-                logger.info("Popular things request $request returned $pr")
-                pr
-            }
+    fun listPopularThings(): ToolCallback =
+        FunctionToolCallback.builder<PopularityRequest, PopularityResponse>(
+            "listPopularThings"
+        ) { request: PopularityRequest ->
+            logger.info("Listing popular ${request.type}s")
+            val pr = PopularityResponse(
+                top = neo4jTemplate.findAll(Mentions::class.java)
+                    .filter { it.type == request.type }
+                    .sortedByDescending { it.count }
+                    .take(request.topK)
+            )
+            logger.info("Popular things request $request returned $pr")
+            pr
+        }
             .inputType(PopularityRequest::class.java)
             .description("List popular things. Invoke when the user asks which are popular composers or instruments or performers.")
-            .objectMapper(ObjectMapper().registerKotlinModule())
             .build()
 
     @Bean
-    fun upcomingPerformances(): FunctionCallback =
-        FunctionCallback.builder()
-            .function<PerformanceRequest, PerformanceResponse>(
-                "listPerformances"
-            ) {
-                val pr = PerformanceResponse(
-                    upcoming = neo4jTemplate.findAll(Performance::class.java)
-                        .sortedBy { it.date }
-                        .take(it.number)
-                )
-                logger.info("Upcoming performances request $it returned $pr")
-                pr
-            }
+    fun upcomingPerformances(): ToolCallback =
+        FunctionToolCallback.builder<PerformanceRequest, PerformanceResponse>(
+            "listPerformances"
+        ) {
+            val pr = PerformanceResponse(
+                upcoming = neo4jTemplate.findAll(Performance::class.java)
+                    .sortedBy { it.date }
+                    .take(it.number)
+            )
+            logger.info("Upcoming performances request $it returned $pr")
+            pr
+        }
             .inputType(PerformanceRequest::class.java)
             .description("Find upcoming performances. Invoke if a user asks for upcoming performances.")
-            .objectMapper(ObjectMapper().registerKotlinModule())
             .build()
 
 }

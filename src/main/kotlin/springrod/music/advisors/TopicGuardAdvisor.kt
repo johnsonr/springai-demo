@@ -3,15 +3,15 @@ package springrod.music.advisors
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.advisor.api.AdvisedRequest
-import org.springframework.ai.chat.client.advisor.api.AdvisedResponse
-import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
-import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
+import org.springframework.ai.chat.client.ChatClientResponse
+import org.springframework.ai.chat.client.advisor.api.CallAdvisor
+import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
 import org.springframework.ai.chat.client.entity
 import org.springframework.ai.chat.messages.AssistantMessage
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
 import org.springframework.ai.chat.model.Generation
+import org.springframework.ai.chat.client.ChatClientRequest
 
 import org.springframework.core.io.ClassPathResource
 import org.springframework.retry.support.RetryTemplate
@@ -39,7 +39,7 @@ class TopicGuardAdvisor(
     private val userContentExtractor: UserContentExtractor = lastMessageUserContentExtractor,
     private val retryTemplate: RetryTemplate =
         RetryTemplateBuilder().maxAttempts(3).fixedBackoff(1000).build()
-) : CallAroundAdvisor {
+) : CallAdvisor {
 
     private val logger: Logger = LoggerFactory.getLogger(TopicGuardAdvisor::class.java)
 
@@ -52,16 +52,16 @@ class TopicGuardAdvisor(
      * We perform the additional model call in the background so that
      * we can reply to the user without delay.
      */
-    override fun aroundCall(
-        advisedRequest: AdvisedRequest,
-        chain: CallAroundAdvisorChain
-    ): AdvisedResponse {
+    override fun adviseCall(
+        chatClientRequest: ChatClientRequest,
+        chain: CallAdvisorChain
+    ): ChatClientResponse {
 
         val topicIsBanned =
             try {
                 // Allow for flaky model
                 retryTemplate.execute<Boolean, Throwable> {
-                    isBannedTopic(userContentExtractor.invoke(advisedRequest))
+                    isBannedTopic(userContentExtractor.invoke(chatClientRequest))
                 }
             } catch (t: Throwable) {
                 logger.error("We tried really hard but the model kept failing. Don't fail the advisor chain", t)
@@ -69,16 +69,16 @@ class TopicGuardAdvisor(
             }
 
         return if (topicIsBanned) {
-            AdvisedResponse.builder()
-                .withAdviseContext(advisedRequest.adviseContext)
-                .withResponse(
-                    ChatResponse.builder().withGenerations(
+            ChatClientResponse.builder()
+                .context(chatClientRequest.context())
+                .chatResponse(
+                    ChatResponse.builder().generations(
                         listOf(Generation(AssistantMessage("I'm sorry, but I can only help you with Classical music.")))
                     )
                         .build()
                 )
                 .build()
-        } else chain.nextAroundCall(advisedRequest)
+        } else chain.nextCall(chatClientRequest)
     }
 
     override fun getName(): String = TopicGuardAdvisor::class.java.simpleName

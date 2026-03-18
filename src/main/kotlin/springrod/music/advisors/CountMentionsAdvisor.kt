@@ -1,9 +1,9 @@
 package springrod.music.advisors
 
-import org.springframework.ai.chat.client.advisor.api.AdvisedRequest
-import org.springframework.ai.chat.client.advisor.api.AdvisedResponse
-import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor
-import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisorChain
+import org.springframework.ai.chat.client.ChatClientRequest
+import org.springframework.ai.chat.client.ChatClientResponse
+import org.springframework.ai.chat.client.advisor.api.CallAdvisor
+import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.annotation.Id
 import org.springframework.data.neo4j.core.Neo4jTemplate
@@ -32,18 +32,19 @@ data class Mentions(
 class CountMentionsAdvisor(
     private val applicationEventPublisher: ApplicationEventPublisher,
     private val neo4jTemplate: Neo4jTemplate,
-) : CallAroundAdvisor {
+) : CallAdvisor {
 
-    override fun aroundCall(
-        advisedRequest: AdvisedRequest,
-        chain: CallAroundAdvisorChain
-    ): AdvisedResponse {
+    override fun adviseCall(
+        chatClientRequest: ChatClientRequest,
+        chain: CallAdvisorChain
+    ): ChatClientResponse {
+        val userText = chatClientRequest.prompt().getUserMessage()?.text ?: ""
         val mentions = neo4jTemplate.findAll<Mentions>(Mentions::class.java)
-        val mentioned = mentions.filter { advisedRequest.userText.contains(it.name, ignoreCase = true) }
+        val mentioned = mentions.filter { userText.contains(it.name, ignoreCase = true) }
         for (mention in mentioned) {
             noteMention(mention)
         }
-        return chain.nextAroundCall(advisedRequest)
+        return chain.nextCall(chatClientRequest)
     }
 
     private fun noteMention(mentions: Mentions) {

@@ -33,7 +33,7 @@ class ConversationSession(
     val conversationId: String = nameGenerator.generateName()
 
     fun messages(): List<Message> {
-        return chatMemory.get(conversationId, 100)
+        return chatMemory.get(conversationId)
     }
 
     fun promptResource(): Resource {
